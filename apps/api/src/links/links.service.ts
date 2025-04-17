@@ -46,7 +46,8 @@ export class LinksService {
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} link`;
+    // return `This action returns a #${id} link`;
+    return this._links[id]
   }
 
   update(id: number, updateLinkDto: UpdateLinkDto) {

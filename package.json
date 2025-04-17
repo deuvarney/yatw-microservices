@@ -1,5 +1,5 @@
 {
-  "name": "my-turborepo",
+  "name": "yatw-microservices",
   "version": "0.0.0",
   "private": true,
   "description": "",
@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "dev": "turbo run dev",
+    "start:dev": "turbo run start:dev",
     "build": "turbo run build",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
@@ -26,5 +27,9 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@nestjs/config": "^4.0.1",
+    "@nestjs/microservices": "^11.0.12"
+  }
 }

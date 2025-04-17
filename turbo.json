@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
   "globalDependencies": [
     "**/.env.*local"
   ],
@@ -19,6 +20,11 @@
     },
     "lint": {},
     "test": {},
-    "test:e2e": {}
+    "test:e2e": {},
+    "start:dev":{
+      // "dependsOn": ["^dev"]
+      "cache": false,
+      "persistent": true
+    }
   }
 }
