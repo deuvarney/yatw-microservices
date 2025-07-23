@@ -74,15 +74,15 @@ export class TvShowsController {
     });
   }
 
-  @Get('injectDataz')
-  async injectShow(@Query('page') page: string = '1') {
+  // Debugging 
+  @Get('injectData')
+  async injectTrendingShowPages(@Query('page') page: string = '1') {
     try {
       const start = Date.now();
       const pages = page.split(',');
       for (const p of pages) {
-        await this.tvShowsService.injectShow(parseInt(p));
+        await this.tvShowsService.injectTrendingShowsPage(parseInt(p));
       }
-      // await this.tvShowsService.injectShow(page);
       return {
         message: 'Data injected successfully',
         totalTime: Date.now() - start,

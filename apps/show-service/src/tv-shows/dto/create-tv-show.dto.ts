@@ -89,9 +89,8 @@ import {
   // isNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Language } from '../entities/language.entity';
 
-class CountryDto {
+export class CountryDto {
   @IsString()
   iso_3166_1: string;
 
@@ -99,7 +98,7 @@ class CountryDto {
   name: string;
 }
 
-class GenreDto {
+export class GenreDto {
   @IsNumber()
   id: number;
 
@@ -107,7 +106,7 @@ class GenreDto {
   name: string;
 }
 
-class NetworkDto {
+export class NetworkDto {
   @IsNumber()
   id: number;
 
@@ -123,7 +122,7 @@ class NetworkDto {
   originCountry?: string;
 }
 
-class PersonDto {
+export class PersonDto {
   @IsNumber()
   id: number;
 
@@ -143,7 +142,7 @@ class PersonDto {
   knownForDepartment?: string;
 }
 
-class DetailedPersonDto {
+export class DetailedPersonDto {
   @IsNumber()
   id: number;
 
@@ -184,7 +183,7 @@ class DetailedPersonDto {
   profilePath?: string;
 }
 
-class ProductionCompanyDto {
+export class ProductionCompanyDto {
   @IsNumber()
   id: number;
 
@@ -261,11 +260,11 @@ export class EpisodeDto {
   @IsNumber()
   voteCount?: number;
 
-  @IsString()
+  @IsNumber()
   seasonId: number;
 }
 
-class SeasonDto {
+export class SeasonDto {
   @IsNumber()
   id: number;
 
@@ -301,6 +300,17 @@ class SeasonDto {
   @ValidateNested({ each: true })
   @Type(() => EpisodeDto)
   episodes?: EpisodeDto[];
+}
+
+export class LanguageDto {
+  @IsString()
+  iso_639_1: string;
+
+  @IsString()
+  name: string;
+
+  @IsString()
+  english_name: string;
 }
 
 export class CreateTvShowDto {
@@ -444,6 +454,7 @@ export class CreateTvShowDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Language)
-  spokenLanguages?: Language[];
+  @Type(() => LanguageDto)
+  spokenLanguages?: LanguageDto[];
 }
+

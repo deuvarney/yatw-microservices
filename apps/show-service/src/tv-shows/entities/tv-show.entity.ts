@@ -194,4 +194,10 @@ export class TvShow {
   //     this.originCountry = this.productionCountries;
   //   }
   // }
+
+  @Column({ nullable: true })
+  lastUpdatedDate: string;
+
+  @Column({nullable: true})
+  cacheStatus: string;
 }

@@ -14,6 +14,7 @@ import { ProductionCompany } from './entities/production-company.entity';
 import { Country } from './entities/country.entity';
 import { Language } from './entities/language.entity';
 import { DetailedPerson } from './entities/detailed-person.entity';
+import { TrendingShows } from './entities/trending.entity';
 import { TMDBApiModule } from './tmdb-api/tmdb-api.module';
 import { TrendingService } from './trending/trending.service';
 import { TrendingController } from './trending/trending.controller';
@@ -33,6 +34,7 @@ import { SearchController } from './search/search.controller';
       Person,
       ProductionCompany,
       Language,
+      TrendingShows,
     ]),
     TMDBApiModule,
   ],
