@@ -73,8 +73,8 @@ export class TvShowsService {
 		private episodeRepository: Repository<Episode>,
 		@InjectRepository(Language)
 		private languageRepository: Repository<Language>,
-		@InjectRepository(TrendingShows)
-		private trendingRepository: Repository<TrendingShows>,
+		// @InjectRepository(TrendingShows)
+		// private trendingRepository: Repository<TrendingShows>,
 
 		private readonly tmdbApiService: TmdbApiService,
 
