@@ -1,4 +1,3 @@
-// interceptors/external-api-fallback.interceptor.ts
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, NotFoundException } from '@nestjs/common';
 import { from, Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -44,7 +43,6 @@ export class ExternalApiFallbackInterceptor implements NestInterceptor {
     private async handleExternalApiAndRespond(request: any, response: any): Promise<void> {
         try {
             const data = await this.tmdbApi.handleOtherRequests(request.url);
-            console.log('External API response:', data);
 
             // Manually send the response
             response.status(200);

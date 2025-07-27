@@ -20,6 +20,7 @@ import { TrendingService } from './trending/trending.service';
 import { TrendingController } from './trending/trending.controller';
 import { SearchService } from './search/search.service';
 import { SearchController } from './search/search.controller';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SearchController } from './search/search.controller';
       // TrendingShows,
     ]),
     TMDBApiModule,
+    RedisModule,
   ],
   controllers: [TvShowsController, TrendingController, SearchController],
   providers: [TvShowsService, SeasonsService, TrendingService, SearchService],
