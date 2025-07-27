@@ -12,6 +12,7 @@ import {
   Res,
   NotFoundException,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 
 import { TvShowsService } from './tv-shows.service';
@@ -32,6 +33,9 @@ import { TrendingResponse } from 'moviedb-promise';
 
 import _ from 'lodash';
 import { transform, isArray, isObject, camelCase } from 'lodash';
+import { ExternalApiFallbackInterceptor } from 'src/interceptors/external-api-fallback.interceptor';
+import { CacheInterceptor } from 'src/redis/interceptors/cache.interceptor';
+import { Cache } from 'src/redis/decorators/cache.decorator';
 
 function camelize(obj) {
   return transform(obj, (result, value, key, target) => {
@@ -58,6 +62,7 @@ function snakeToCamelCaseKeys(obj) {
 }
 
 @Controller('tv')
+@UseInterceptors(CacheInterceptor, ExternalApiFallbackInterceptor)
 export class TvShowsController {
   constructor(
     private readonly tvShowsService: TvShowsService,
@@ -95,6 +100,7 @@ export class TvShowsController {
   }
 
   @Get(':id/season/:seasonNumber')
+  @Cache()
   async findSeason(
     @Param('id', ParseIntPipe) id: number,
     @Param('seasonNumber', ParseIntPipe) seasonNumber: number,
@@ -102,23 +108,13 @@ export class TvShowsController {
     // console.log('hitting season');
     let season = await this.tvShowsService.findDetailedSeason(id, seasonNumber);
 
-    if (!season) {
-      // If not found in DB, get the info from the TMDB API
-
-      try {
-        season = await this.tmdbApiService.getSeasonResponse(id, seasonNumber);
-        season = camelize(season); // convert snake_case to camelCase for dto Transform
-      } catch /* (error)*/ {
-        throw new NotFoundException(
-          `Season not found for id ${id} and season number ${seasonNumber}`,
-        );
-      }
       if (!season) {
+        // If not found in DB,  let interceptor handle getting the response from the TMDB API
         throw new NotFoundException(
           `Season not found for id ${id} and season number ${seasonNumber}`,
         );
       }
-    }
+  
 
     const plaintoInstance = plainToInstance(DetailedSeasonResponseDto, season, {
       excludeExtraneousValues: true,
@@ -130,9 +126,11 @@ export class TvShowsController {
     return plaintoInstance;
   }
 
+  // @UseInterceptors(CacheInterceptor)
   @Get(':id')
+  @Cache()
   async findOne(@Param('id') id: number) {
-    let tvShow = await this.tvShowsService.findOne(id);
+    let tvShow = await this.tvShowsService.findOneTvShow(id);
     // Order the seasons by season_number
 
     if (!tvShow) {
