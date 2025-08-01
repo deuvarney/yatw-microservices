@@ -21,7 +21,8 @@ import { Country } from './entities/country.entity';
 import { Language } from './entities/language.entity';
 import { DetailedPerson } from './entities/detailed-person.entity';
 import { TmdbApiService } from './tmdb-api/tmdb-api.service';
-import { TrendingShows } from './entities/trending.entity';
+import { ShowCacheStatus, TrendingShows } from './entities/trending.entity';
+import { PopularShows } from './entities/popular.entity';
 
 async function promiseSleep(timout: number) {
 	return new Promise((resolve) => {
@@ -73,8 +74,10 @@ export class TvShowsService {
 		private episodeRepository: Repository<Episode>,
 		@InjectRepository(Language)
 		private languageRepository: Repository<Language>,
-		// @InjectRepository(TrendingShows)
-		// private trendingRepository: Repository<TrendingShows>,
+		@InjectRepository(TrendingShows)
+		private trendingShowsRepository: Repository<TrendingShows>,
+		@InjectRepository(PopularShows)
+		private popularShowsRepository: Repository<PopularShows>,
 
 		private readonly tmdbApiService: TmdbApiService,
 
@@ -385,7 +388,9 @@ export class TvShowsService {
 			season.episodes = await this.createEpisodes(
 				season.id,
 				seasonDto.episodes,
-				manager
+				manager,
+				tvShowId,
+				seasonDto.seasonNumber
 			);
 		}
 
@@ -395,7 +400,9 @@ export class TvShowsService {
 	private async createEpisodes(
 		seasonId: number,
 		episodeDtos: EpisodeDto[],
-		manager: EntityManager
+		manager: EntityManager,
+		showId: number,
+		seasonNumber: number
 	): Promise<Episode[]> {
 		const existingEpisodes = await manager.getRepository(Episode).find({
 			where: { id: In(episodeDtos.map(e => e.id)) },
@@ -407,6 +414,12 @@ export class TvShowsService {
 		const newEpisodes = [];
 
 		for (const episodeDto of missingEpisodes) {
+			/* Populate values that may be incorrectly missing from the API,
+			 TODO: ensure to report a bug for showId 11890, season 20, episode 174 for a missing showId
+			 */
+			episodeDto.showId = episodeDto.showId || showId;
+			episodeDto.seasonNumber = episodeDto.seasonNumber || seasonNumber;
+
 			const episode = await this.createEpisode(seasonId, episodeDto, manager);
 			newEpisodes.push(episode);
 		}
@@ -446,7 +459,16 @@ export class TvShowsService {
 		episode.crew = crew;
 		episode.guestStars = guestStars;
 
-		return await manager.save(Episode, episode);
+		let savedEpisode;
+		try {
+			savedEpisode = await manager.save(Episode, episode);
+
+		} catch (error) {
+			console.error('error saving episode', seasonId, episodeDto);
+			throw error;
+		}
+
+		return savedEpisode;
 	}
 
 	private async findOrCreateDetailedPeople(
@@ -623,7 +645,8 @@ export class TvShowsService {
 			);
 		}
 
-		if (apiData.origin_country?.length) {
+		// Handle when productionCountries are not passed (TODO: Creeate defect for 13126)
+		if (apiData.origin_country?.length && createTvShowDto.productionCountries?.length) {
 			createTvShowDto.originCountry = apiData.origin_country.map((c) =>
 				createTvShowDto.productionCountries.find((pc) => pc.iso_3166_1 === c),
 			);
@@ -720,6 +743,99 @@ export class TvShowsService {
 		return this.create(createTvShowDto);
 	}
 
+	async findTrendingShows(page = 1): Promise<{
+		results: TvShow[];
+		page: number;
+		total_pages: number;
+		total_results: number;
+	}> {
+		// Check database for trending shows data array
+		const trendingShowPage = await this.trendingShowsRepository.findOne({ where: { page } });
+
+		// If the data is empty/ does not exist, call this.injectTrendingShowsPage() (return null for now)
+		if (!trendingShowPage) { return null; }
+
+		// If the data is not empty, get the array and then check if all shows are available in the database
+		if (trendingShowPage.showsIds.length > 0) {
+			const shows = await this.tvShowRepository.find({
+				where: {
+					id: In(trendingShowPage.showsIds)
+				},
+				relations: [
+					'genres',
+					//   'networks',
+					//   'seasons',
+					//   'productionCompanies',
+					//   'productionCompanies.originCountry',
+					//   'productionCountries',
+					'originCountry',
+				],
+			});
+			if (shows.length === trendingShowPage.showsIds.length) {
+				// return shows;
+				const take = 20;
+				const count = await this.tvShowRepository.count();
+				const totalPages = Math.ceil(count / take);
+				return {
+					results: shows,
+					page,
+					total_pages: totalPages,
+					total_results: count,
+				};
+			}
+		}
+		// If not all shows are available, (return null for now)
+		return null;
+		// Return array of shows
+	}
+
+	async findPopularShows(page = 1): Promise<{
+		results: TvShow[];
+		page: number;
+		total_pages: number;
+		total_results: number;
+	}> {
+		// Check database for trending shows data array
+		const popularShowsPage = await this.popularShowsRepository.findOne({ where: { page } });
+
+		// If the data is empty/ does not exist, call this.injectTrendingShowsPage() (return null for now)
+		if (!popularShowsPage) { return null; }
+
+		// If the data is not empty, get the array and then check if all shows are available in the database
+		if (popularShowsPage.showsIds.length > 0) {
+			const shows = await this.tvShowRepository.find({
+				where: {
+					id: In(popularShowsPage.showsIds)
+				},
+				relations: [
+					'genres',
+					//   'networks',
+					//   'seasons',
+					//   'productionCompanies',
+					//   'productionCompanies.originCountry',
+					//   'productionCountries',
+					'originCountry',
+				],
+			});
+			if (shows.length === popularShowsPage.showsIds.length) {
+				// return shows;
+				const take = 20;
+				const count = await this.tvShowRepository.count();
+				const totalPages = Math.ceil(count / take);
+				return {
+					results: shows,
+					page,
+					total_pages: totalPages,
+					total_results: count,
+				};
+			}
+		}
+		// If not all shows are available, (return null for now)
+		return null;
+		// Return array of shows
+	}
+
+
 	async findAll(page: number): Promise<{
 		results: TvShow[];
 		page: number;
@@ -781,22 +897,8 @@ export class TvShowsService {
 		await this.tvShowRepository.remove(tvShow);
 	}
 
-	async injectTrendingShowsPage(page = 1): Promise<void> {
-
-		// const trendingShowPage = null;
-
-		const showIds: number[] = (await this.tmdbApiService.getTrendingTvShows(page)).results.map(s => s.id);
-
-		// if (false && trendingShowPage && trendingShowPage.cacheStatus === 'cached' && new Date(trendingShowPage.lastUpdatedDate).getDay() === new Date().getDay()) {
-		//   shows = trendingShowPage.showsIds;
-		// } else {
-		//   if (trendingShowPage) {
-		//     await this.trendingRepository.update(trendingShowPage.id, { page, cacheStatus: ShowCacheStatus.UPDATING, });
-		//   }
-		//   shows = (await this.tmdbApiService.getTrendingTvShows(page)).results.map(s => s.id);
-
-		// }
-
+	async injectShows(showIds: number[]): Promise<void> {
+		if (!showIds.length) return;
 		const existingShows = await this.tvShowRepository.find({
 			where: {
 				id: In(showIds)
@@ -812,43 +914,67 @@ export class TvShowsService {
 			// const fullShowResponse = await fetch(
 			//   `https://api.themoviedb.org/3/tv/${show.id}?api_key=9b036259d38fe5e4eddd383b00877ee7`,
 			// );
-			const fullShowResponse = await this.tmdbApiService.getFullShowResponse(
-				missingShowId,
-			);
-			const fullShowData: UpdatedShowResponse = fullShowResponse; //await fullShowResponse.json();
-
-			const updatedSeasons: UpdateTVSeasonResponse[] = [];
-			for (const season of fullShowData.seasons) {
-				// Replace full show season data, with season call w/ episode data
-				const seasonNumber = season.season_number;
-
-				// const seasonResponse = await fetch(
-				//   `https://api.themoviedb.org/3/tv/${show.id}/season/${seasonNumber}?api_key=9b036259d38fe5e4eddd383b00877ee7&season_number=${seasonNumber}`,
-				// );
-				const seasonData = (await this.tmdbApiService.getSeasonResponse(
+			try {
+				const fullShowResponse = await this.tmdbApiService.getFullShowResponse(
 					missingShowId,
-					seasonNumber,
-				)) as UpdateTVSeasonResponse;
-				updatedSeasons.push(seasonData);
-				await promiseSleep(500);
+				);
+				const fullShowData: UpdatedShowResponse = fullShowResponse; //await fullShowResponse.json();
+
+				const updatedSeasons: UpdateTVSeasonResponse[] = [];
+				for (const season of fullShowData.seasons) {
+					// Replace full show season data, with season call w/ episode data
+					const seasonNumber = season.season_number;
+
+					// const seasonResponse = await fetch(
+					//   `https://api.themoviedb.org/3/tv/${show.id}/season/${seasonNumber}?api_key=9b036259d38fe5e4eddd383b00877ee7&season_number=${seasonNumber}`,
+					// );
+					const seasonData = (await this.tmdbApiService.getSeasonResponse(
+						missingShowId,
+						seasonNumber,
+					)) as UpdateTVSeasonResponse;
+					updatedSeasons.push(seasonData);
+					await promiseSleep(500);
+				}
+				fullShowData.seasons = updatedSeasons;
+
+				await this.importFromExternalApi(fullShowData);
+			} catch (error) {
+				console.log('Unable to import show:', missingShowId);
+				throw error;
 			}
-			fullShowData.seasons = updatedSeasons;
-
-			await this.importFromExternalApi(fullShowData);
-			// }
 		}
+	}
 
-		// // Update last updated time if the 
-		// if (trendingShowPage) {
-		//   trendingShowPage.cacheStatus = ShowCacheStatus.CACHED;
+	async injectTrendingShowsPage(page = 1): Promise<void> {
 
-		//           await this.trendingRepository.update(trendingShowPage.id, { cacheStatus: ShowCacheStatus.CACHED, });
+		const showIds: number[] = (await this.tmdbApiService.getTrendingTvShows(page)).results.map(s => s.id);
 
-		//   await this.trendingRepository.update(trendingShowPage);
+		await this.injectShows(showIds);
 
-		// } else {
+		this.trendingShowsRepository.save({
+			id: page,
+			page,
+			lastUpdatedDate: new Date().toDateString(),
+			showsIds: showIds,
+			cacheStatus: ShowCacheStatus.CACHED,
+			count: showIds.length
+		})
+	}
 
-		// }
+	async injectPopularShowsPage(page = 1): Promise<void> {
+
+		const showIds: number[] = (await this.tmdbApiService.getPopularShows(page)).results.map(s => s.id);
+
+		await this.injectShows(showIds);
+
+		this.popularShowsRepository.save({
+			id: page,
+			page,
+			lastUpdatedDate: new Date().toDateString(),
+			showsIds: showIds,
+			cacheStatus: ShowCacheStatus.CACHED,
+			count: showIds.length
+		})
 	}
 
 	async getSeason(seasonNumber: number, showId: number): Promise<Season> {

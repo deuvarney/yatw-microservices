@@ -67,7 +67,7 @@ export class TvShowsController {
   constructor(
     private readonly tvShowsService: TvShowsService,
     private readonly tmdbApiService: TmdbApiService,
-  ) {}
+  ) { }
 
   @Post()
   async create(@Body(ValidationPipe) createTvShowDto: CreateTvShowDto) {
@@ -99,6 +99,44 @@ export class TvShowsController {
     }
   }
 
+
+  // Debugging 
+  @Get('injectPopularData')
+  async injectPopularShowPages(@Query('page') page: string = '1') {
+    try {
+      const start = Date.now();
+      const pages = page.split(',');
+      for (const p of pages) {
+        await this.tvShowsService.injectPopularShowsPage(parseInt(p));
+      }
+      return {
+        message: 'Data injected successfully',
+        totalTime: Date.now() - start,
+        timeCompleted: new Date(),
+      };
+    } catch (error) {
+      console.error('Error injecting popular error data:', error);
+      return { error: 'Failed to inject data' };
+    }
+  }
+
+  // Debugging
+  @Get('injectShow/:showId')
+  async injectShow(@Param('showId', ParseIntPipe) showId: number,) {
+    try {
+      const start = Date.now();
+      await this.tvShowsService.injectShows([showId]);
+      return {
+        message: 'Show injected successfully',
+        totalTime: Date.now() - start,
+        timeCompleted: new Date(),
+      };
+    } catch (error) {
+      console.error('Error injecting showId error data:', error);
+      return { error: 'Failed to inject data for showId: ' + showId };
+    }
+  }
+
   @Get(':id/season/:seasonNumber')
   @Cache()
   async findSeason(
@@ -108,13 +146,13 @@ export class TvShowsController {
     // console.log('hitting season');
     let season = await this.tvShowsService.findDetailedSeason(id, seasonNumber);
 
-      if (!season) {
-        // If not found in DB,  let interceptor handle getting the response from the TMDB API
-        throw new NotFoundException(
-          `Season not found for id ${id} and season number ${seasonNumber}`,
-        );
-      }
-  
+    if (!season) {
+      // If not found in DB,  let interceptor handle getting the response from the TMDB API
+      throw new NotFoundException(
+        `Season not found for id ${id} and season number ${seasonNumber}`,
+      );
+    }
+
 
     const plaintoInstance = plainToInstance(DetailedSeasonResponseDto, season, {
       excludeExtraneousValues: true,

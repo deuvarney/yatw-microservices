@@ -14,13 +14,14 @@ import { ProductionCompany } from './entities/production-company.entity';
 import { Country } from './entities/country.entity';
 import { Language } from './entities/language.entity';
 import { DetailedPerson } from './entities/detailed-person.entity';
-// import { TrendingShows } from './entities/trending.entity';
+import { TrendingShows } from './entities/trending.entity';
 import { TMDBApiModule } from './tmdb-api/tmdb-api.module';
-import { TrendingService } from './trending/trending.service';
 import { TrendingController } from './trending/trending.controller';
 import { SearchService } from './search/search.service';
 import { SearchController } from './search/search.controller';
 import { RedisModule } from 'src/redis/redis.module';
+import { PopularShows } from './entities/popular.entity';
+import { PopularController } from './popular/popular.controller';
 
 @Module({
   imports: [
@@ -35,12 +36,22 @@ import { RedisModule } from 'src/redis/redis.module';
       Person,
       ProductionCompany,
       Language,
-      // TrendingShows,
+      TrendingShows,
+      PopularShows
     ]),
     TMDBApiModule,
     RedisModule,
   ],
-  controllers: [TvShowsController, TrendingController, SearchController],
-  providers: [TvShowsService, SeasonsService, TrendingService, SearchService],
+  controllers: [
+    PopularController,
+    TvShowsController,
+    TrendingController,
+    SearchController
+  ],
+  providers: [
+    TvShowsService,
+    SeasonsService,
+    SearchService
+  ],
 })
-export class TvShowsModule {}
+export class TvShowsModule { }

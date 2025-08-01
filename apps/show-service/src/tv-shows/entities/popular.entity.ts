@@ -1,16 +1,8 @@
 import { Column, Entity, PrimaryColumn } from "typeorm";
+import { ShowCacheStatus } from "./trending.entity";
 
-export enum ShowCacheStatus {
-  CACHED = 'cached',
-  STALE = 'stale',
-  EXPIRED = 'expired',
-  INVALID = 'invalid',
-  VALIDATING = 'validating',
-  UPDATING = 'updating',
-}
-
-@Entity('trending_shows')
-export class TrendingShows {
+@Entity('popular_shows')
+export class PopularShows {
   @PrimaryColumn()
   id: number;
 
@@ -28,4 +20,5 @@ export class TrendingShows {
 
   @Column('int', { array: true })
   showsIds: number[]
+
 }

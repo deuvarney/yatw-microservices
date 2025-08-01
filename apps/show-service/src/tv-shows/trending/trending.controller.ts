@@ -17,7 +17,7 @@ import { CacheInterceptor } from 'src/redis/interceptors/cache.interceptor';
 import { Cache } from 'src/redis/decorators/cache.decorator';
 
 @Controller('trending')
-@UseInterceptors(CacheInterceptor)
+@UseInterceptors(CacheInterceptor, ExternalApiFallbackInterceptor)
 export class TrendingController {
   constructor(
     private readonly tvShowsService: TvShowsService,
@@ -25,26 +25,20 @@ export class TrendingController {
   ) { }
 
   @Get('tv/day')
-  @UseInterceptors(ExternalApiFallbackInterceptor)
   @Cache()
   async findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
   ): Promise<TrendingResponse> {
-    const tvShows = await this.tvShowsService.findAll(page);
 
-    // Transform entity to response DTO
-    const resp = plainToInstance(TvShowsResponseDto, tvShows.results, {
-      excludeExtraneousValues: true,
-    });
+    const trendingPageShowsInfo = await this.tvShowsService.findTrendingShows(page);
 
-    // TODO: Add logic so that the cache interceptor does not cache if page > tvShows.total_pages
-    if (page > tvShows.total_pages) {
+    if (!trendingPageShowsInfo) {
       throw new NotFoundException(`Page ${page} not found`);
     }
 
-    return {
-      ...tvShows,
-      results: resp,
-    } as TrendingResponse
+    const resp = plainToInstance(TvShowsResponseDto, trendingPageShowsInfo.results, {
+      excludeExtraneousValues: true,
+    });
+    return resp as TrendingResponse;
   }
 }
